@@ -25,6 +25,9 @@ public class WorkerThread implements Runnable {
         this.service = service;
     }
 
+    /*
+    111
+     */
     @Override
     public void run() {
         try(ObjectInputStream objectInputStream = new ObjectInputStream(socket.getInputStream())){
@@ -37,5 +40,7 @@ public class WorkerThread implements Runnable {
         }catch (IOException|ClassNotFoundException|NoSuchMethodException|IllegalAccessException| InvocationTargetException e){
             logger.error("调用或发送时有错误发生：", e);
         }
+
+
     }
 }
