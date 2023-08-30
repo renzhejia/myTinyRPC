@@ -22,8 +22,8 @@ public class DefaultServiceRegistry implements ServiceRegistry {
     在注册服务时，默认采用这个对象实现的接口的完整类名作为服务名，例如某个对象 A 实现了接口 X 和 Y，
     那么将 A 注册进去后，会有两个服务名 X 和 Y 对应于 A 对象。这种处理方式也就说明了某个接口只能有一个对象提供服务。
      */
-    private final Map<String, Object> serviceMap = new ConcurrentHashMap<>();
-    private final Set<String> registeredService = ConcurrentHashMap.newKeySet();
+    private static final Map<String, Object> serviceMap = new ConcurrentHashMap<>();
+    private static final Set<String> registeredService = ConcurrentHashMap.newKeySet();
 
     @Override
     public synchronized <T> void register(T service) {
