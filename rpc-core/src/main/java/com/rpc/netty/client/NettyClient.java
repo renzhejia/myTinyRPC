@@ -30,17 +30,22 @@ public class NettyClient implements RpcClient {
     }
 
     static {
+        //创建bootstrap对象，配置参数
         NioEventLoopGroup group = new NioEventLoopGroup();
         bootstrap = new Bootstrap();
+        //设置线程组
         bootstrap.group(group)
+                //设置客户端的通道实现类型
                 .channel(NioSocketChannel.class)
                 .option(ChannelOption.SO_KEEPALIVE,true)
+                //使用匿名内部类初始化通道
                 .handler(new ChannelInitializer<SocketChannel>() {
                     @Override
                     protected void initChannel(SocketChannel socketChannel) throws Exception {
                         ChannelPipeline pipeline = socketChannel.pipeline();
                         pipeline.addLast(new CommonDecoder())
                                 .addLast(new CommonEncoder(new JsonSerializer()))
+                                //添加客户端通道的处理器
                                 .addLast(new NettyClientHandler());
                     }
                 });
@@ -49,6 +54,7 @@ public class NettyClient implements RpcClient {
     @Override
     public Object sendRequest(RpcRequest rpcRequest) {
         try{
+            //连接服务端
             ChannelFuture future = bootstrap.connect(host, port).sync();
             logger.info("客户端连接到服务器 {}:{}", host, port);
             Channel channel = future.channel();
@@ -60,6 +66,7 @@ public class NettyClient implements RpcClient {
                         logger.error("发送消息时有错误发生: ", future1.cause());
                     }
                 });
+                //对通道关闭进行监听
                 channel.closeFuture().sync();
                 /*
                 在静态代码块中就直接配置好了 Netty 客户端，等待发送数据时启动，channel 将 RpcRequest 对象写出，
