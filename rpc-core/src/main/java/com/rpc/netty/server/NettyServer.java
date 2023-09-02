@@ -4,6 +4,7 @@ import com.rpc.RpcServer;
 import com.rpc.codec.CommonDecoder;
 import com.rpc.codec.CommonEncoder;
 import com.rpc.serializer.JsonSerializer;
+import com.rpc.serializer.KryoSerializer;
 import io.netty.bootstrap.ServerBootstrap;
 import io.netty.channel.ChannelFuture;
 import io.netty.channel.ChannelInitializer;
@@ -65,7 +66,7 @@ public class NettyServer implements RpcServer {
                         protected void initChannel(SocketChannel socketChannel) throws Exception {
                             ChannelPipeline pipeline = socketChannel.pipeline();
                             //给pipeline管道设置处理器,这些处理都是交给workerGroup去操作的
-                            pipeline.addLast(new CommonEncoder(new JsonSerializer()));
+                            pipeline.addLast(new CommonEncoder(new KryoSerializer()));
                             pipeline.addLast(new CommonDecoder());
                             pipeline.addLast(new NettyServerHandler());
                         }
