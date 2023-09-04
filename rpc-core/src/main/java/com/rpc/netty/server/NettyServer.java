@@ -3,6 +3,14 @@ package com.rpc.netty.server;
 import com.rpc.RpcServer;
 import com.rpc.codec.CommonDecoder;
 import com.rpc.codec.CommonEncoder;
+import com.rpc.enumeration.RpcError;
+import com.rpc.exception.RpcException;
+import com.rpc.hook.ShutdownHook;
+import com.rpc.provider.ServiceProvider;
+import com.rpc.provider.ServiceProviderImpl;
+import com.rpc.registry.NacosServiceRegistry;
+import com.rpc.registry.ServiceRegistry;
+import com.rpc.serializer.CommonSerializer;
 import com.rpc.serializer.JsonSerializer;
 import com.rpc.serializer.KryoSerializer;
 import io.netty.bootstrap.ServerBootstrap;
@@ -18,8 +26,43 @@ import io.netty.handler.logging.LoggingHandler;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
+import java.net.InetSocketAddress;
+
 public class NettyServer implements RpcServer {
     private static final Logger logger= LoggerFactory.getLogger(NettyServer.class);
+
+    private final String host;
+    private final int port;
+
+    private final ServiceRegistry serviceRegistry;
+    private final ServiceProvider serviceProvider;
+
+    private final CommonSerializer serializer;
+
+    public NettyServer(String host, int port) {
+        this(host, port, DEFAULT_SERIALIZER);
+    }
+
+    public NettyServer(String host, int port, Integer serializer) {
+        this.host = host;
+        this.port = port;
+        serviceRegistry = new NacosServiceRegistry();
+        serviceProvider = new ServiceProviderImpl();
+        this.serializer = CommonSerializer.getByCode(serializer);
+    }
+
+
+    //将服务保存在本地的注册表，同时注册到 Nacos 上。
+    @Override
+    public <T> void publishService(T service, Class<T> serviceClass) {
+        if(serializer == null) {
+            logger.error("未设置序列化器");
+            throw new RpcException(RpcError.SERIALIZER_NOT_FOUND);
+        }
+        serviceProvider.addServiceProvider(service, serviceClass);
+        serviceRegistry.register(serviceClass.getCanonicalName(), new InetSocketAddress(host, port));
+        start();
+    }
 
     /*
     Netty 中有一个很重要的设计模式——责任链模式，责任链上有多个处理器，每个处理器都会对数据进行加工，
@@ -34,7 +77,7 @@ public class NettyServer implements RpcServer {
                 3.channel支持的IO操作（例如读、写、连接和绑定），以及处理与channel相关联的所有IO事件和请求的ChannelPipeline。
      */
     @Override
-    public void start(int port) {
+    public void start() {
         //创建两个线程组 boosGroup、workerGroup
         /*
         bossGroup 用于监听客户端连接，专门负责与客户端创建连接，并把连接注册到workerGroup的Selector中。
@@ -95,7 +138,8 @@ channelFuture.addListener(new ChannelFutureListener() {
              */
             //bind():提供用于服务端或者客户端绑定服务器地址和端口号，默认是异步启动。如果加上sync()方法则是同步。
             ChannelFuture future = serverBootstrap.bind(port).sync();
-
+            //这样在 RpcServer 启动之前，只需要调用 addClearAllHook，就可以注册这个钩子了,可以在服务停止后，在nacos中注销该钩子
+            ShutdownHook.getShutdownHook().addClearAllHook();
             //对关闭通道进行监听
             future.channel().closeFuture().sync();
         }catch (InterruptedException e){
@@ -105,4 +149,6 @@ channelFuture.addListener(new ChannelFutureListener() {
             workerGroup.shutdownGracefully();
         }
     }
+
+
 }

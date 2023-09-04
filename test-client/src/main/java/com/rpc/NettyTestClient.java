@@ -9,7 +9,7 @@ public class NettyTestClient {
 
     public static void main(String[] args) {
 
-        NettyClient client = new NettyClient("127.0.0.1", 9999);
+        RpcClient client = new NettyClient("127.0.0.1", 9999);
         /*
         注意这里 RpcClientProxy 通过传入不同的 Client（SocketClient、NettyClient）
         来切换客户端不同的发送方式。

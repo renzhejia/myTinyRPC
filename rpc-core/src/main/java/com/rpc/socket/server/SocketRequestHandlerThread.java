@@ -1,9 +1,10 @@
 package com.rpc.socket.server;
 
-import com.rpc.RequestHandler;
+import com.rpc.handler.RequestHandler;
 import com.rpc.entity.RpcRequest;
 import com.rpc.entity.RpcResponse;
-import com.rpc.registry.ServiceRegistry;
+import com.rpc.provider.ServiceProvider;
+import com.rpc.serializer.CommonSerializer;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -12,17 +13,17 @@ import java.io.ObjectInputStream;
 import java.io.ObjectOutputStream;
 import java.net.Socket;
 
-public class RequestHandlerThread implements Runnable {
-    private static final Logger logger = LoggerFactory.getLogger(RequestHandlerThread.class);
+public class SocketRequestHandlerThread implements Runnable {
+    private static final Logger logger = LoggerFactory.getLogger(SocketRequestHandlerThread.class);
 
     private Socket socket;
     private RequestHandler requestHandler;
-    private ServiceRegistry serviceRegistry;
+    private CommonSerializer serializer;
 
-    public RequestHandlerThread(Socket socket, RequestHandler requestHandler, ServiceRegistry serviceRegistry) {
+    public SocketRequestHandlerThread(Socket socket, RequestHandler requestHandler, CommonSerializer serializer) {
         this.socket = socket;
         this.requestHandler = requestHandler;
-        this.serviceRegistry = serviceRegistry;
+        this.serializer = serializer;
     }
 
     /*
@@ -35,9 +36,7 @@ public class RequestHandlerThread implements Runnable {
         try (ObjectInputStream objectInputStream = new ObjectInputStream(socket.getInputStream())) {
             ObjectOutputStream objectOutputStream = new ObjectOutputStream(socket.getOutputStream());
             RpcRequest rpcRequest = (RpcRequest) objectInputStream.readObject();
-            String interfaceName = rpcRequest.getInterfaceName();
-            Object service = serviceRegistry.getService(interfaceName);
-            Object result = requestHandler.handler(rpcRequest, service);
+            Object result = requestHandler.handler(rpcRequest);
             objectOutputStream.writeObject(RpcResponse.success(result));
             objectOutputStream.flush();
         } catch (IOException | ClassNotFoundException e) {
